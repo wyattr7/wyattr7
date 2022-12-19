@@ -1,0 +1,151 @@
+install.packages("regclass")
+install.packages("caret")
+install.packages("rattle")
+install.packages("rpart")
+install.packages("kableExtra")
+library(regclass)
+library(caret)
+library(bestNormalize)
+library(rattle)
+library(rpart)
+library(dplyr)
+library(kableExtra)
+
+data <- read.csv("data.csv")
+DataBN <- data
+
+
+X_Crim <- bestNormalize(data$CRIM)
+DataBN$CRIM <- X_Crim$x.t
+
+X_ZN <- bestNormalize(data$ZN)
+DataBN$ZN <- X_ZN$x.t
+
+X_INDUS <- bestNormalize(data$INDUS)
+DataBN$INDUS <- X_INDUS$x.t
+
+X_CHAS <- bestNormalize(data$CHAS)
+DataBN$CHAS <- X_CHAS$x.t
+
+X_NOX <- bestNormalize(data$NOX)
+DataBN$NOX <- X_NOX$x.t
+
+X_RM <- bestNormalize(data$RM)
+DataBN$RM <- X_RM$x.t
+
+X_AGE <- bestNormalize(data$AGE)
+DataBN$AGE <- X_AGE$x.t
+
+X_DIS <- bestNormalize(data$DIS)
+DataBN$DIS <- X_DIS$x.t
+
+X_RAD <- bestNormalize(data$RAD)
+DataBN$RAD <- X_RAD$x.t
+
+X_TAX <- bestNormalize(data$TAX)
+DataBN$TAX <- X_TAX$x.t
+
+X_PTRATIO <- bestNormalize(data$PTRATIO)
+DataBN$PTRATIO <- X_PTRATIO$x.t
+
+X_B <- bestNormalize(data$B)
+DataBN$B <- X_B$x.t
+
+X_LSTAT <- bestNormalize(data$LSTAT)
+DataBN$LSTAT <- X_LSTAT$x.t
+
+X_MEDV <- bestNormalize(data$MEDV)
+DataBN$MEDV <- X_MEDV$x.t
+
+DataBN <- DataBN[complete.cases(DataBN),]
+data <- data[complete.cases(data),]
+infodensity <- nearZeroVar(DataBN, saveMetrics = TRUE)
+infodensity
+highlycorrelated <- findCorrelation( cor(DataBN) , cutoff = .90)
+highlycorrelated
+
+
+fitControl <- trainControl(method="repeatedcv",number=5,repeats=10)
+set.seed(474); train.rows <- sample(1:nrow(DataBN),0.7*nrow(DataBN))
+TRAIN <- DataBN[train.rows,]
+HOLDOUT <- DataBN[-train.rows,]
+
+fitControl1 <- trainControl(method="repeatedcv",number=5,repeats=10)
+set.seed(474); train.rows <- sample(1:nrow(data),0.7*nrow(data))
+TRAIN1 <- data[train.rows,]
+HOLDOUT1 <- data[-train.rows,]
+
+
+
+rpartGrid <- expand.grid(cp= 10^seq(-5,-1,length = 50))
+
+Tree2 <- train(MEDV~., data = TRAIN1,
+               method = "rpart",
+               trControl = fitControl1,
+               tuneGrid = rpartGrid,
+               preProc=c("center","scale"))
+Tree2$results
+Tree2$bestTune
+
+Tree2Result <- rpart(MEDV~., data = TRAIN1, cp =  3.906940e-02)
+fancyRpartPlot(Tree2Result)
+visualize_model(Tree2Result)
+
+
+1.486772
+Tree1 <- train(MEDV~., data = TRAIN,
+             method = "rpart",
+             trControl = fitControl,
+             tuneGrid = rpartGrid,
+             preProc=c("center","scale"))
+Tree1$results
+Tree1$bestTune
+
+Tree1Result <- rpart(MEDV~., data = TRAIN, cp = 0.04714866363)
+fancyRpartPlot(Tree1Result)
+visualize_model(Tree1Result)
+postResample(predict(Tree1,newdata=HOLDOUT),HOLDOUT$MEDV)
+
+
+trControl <- trainControl(method="repeatedcv",number=5, repeats = 5)
+set.seed(474)
+Vanilly <- train(MEDV~., data=TRAIN, method='glm',
+             trControl=trControl, preProc=c("center", "scale") )
+Vanilly
+Vanilly$results
+plot(Vanilly$results$RMSE)
+postResample(predict(Vanilly,newdata=HOLDOUT),HOLDOUT$MEDV)
+
+RESULTS <- data.frame(TRAIN.RMSE = c(5.702305),
+                      HOLDOUT.RMSE = c(5.0535246))
+RESULTS$Ratio <- round(RESULTS$HOLDOUT.RMSE / RESULTS$TRAIN.RMSE,2)
+row.names(RESULTS) <- c("Tree Model")
+RESULTS
+
+RESULTS %>% 
+  arrange(HOLDOUT.RMSE) -> RESULTS
+
+kbl(RESULTS) %>% 
+  kable_material_dark()
+
+options(digits = 7)
+options(scipen = 7)
+1 - pchisq(37.5,1)
+
+
+GLMNetGrid <- expand.grid(alpha = seq(0,.4,.05), lambda = seq(0,1,.05))
+set.seed(474)
+GLMnet <- train(MEDV~.,data=TRAIN, method='glmnet',
+                tuneGrid=GLMNetGrid, trControl=fitControl, preProc = c("center", "scale"))
+GLMnet
+plot(GLMnet)
+GLMnet$bestTune 
+min(GLMnet$results$RMSE)
+postResample(predict(GLMnet, newdata = HOLDOUT),HOLDOUT$MEDV)
+
+
+
+
+GLMNetResult <- rpart(MEDV~., data = TRAIN1, cp =  3.906940e-02)
+fancyRpartPlot(Tree2Result)
+visualize_model(Tree2Result)
