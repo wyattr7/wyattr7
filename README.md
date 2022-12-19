@@ -1,0 +1,4 @@
+- 👋 Hi, I’m @wyattr7
+- 👀 I’m interested in data mining, machine learning, AI, and so much more.
+- 🌱 I’m currently looking for a job in an analyst role.
+- 📫 How to reach me: email- wyattrector7700@gmail.com, phone- +1 (727) 386-0294
